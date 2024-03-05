@@ -1,0 +1,5 @@
+BOARD_SIZE = 18
+CELL_SIZE = 40
+HUMAN_PLAYER = "X"
+AI_PLAYER = "O"
+SCORE_FILE = "game_scores.txt"
