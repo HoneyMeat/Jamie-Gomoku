@@ -1,5 +1,6 @@
 # Project-specific
 game_scores.txt
+queued_update.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

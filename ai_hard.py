@@ -22,23 +22,73 @@ class AI_hard:
         self.player_moves = player_moves
         self.easy_ai = easy_ai
 
-    def is_extendable_three(self, i, j, player):
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        for dx, dy in directions:
-            count = 0
-            extendable = False
-            for k in range(-1, 4):  # Check one beyond the line
-                x, y = i + k * dx, j + k * dy
-                if 0 <= x < BOARD_SIZE and 0 <= y < BOARD_SIZE:
-                    if self.board[x][y] == player:
+    def is_extendable_three(self, board, ai_moves):
+        directions = [
+            (1, 0),
+            (0, 1),
+            (1, 1),
+            (1, -1),
+            (-1, 0),
+            (0, -1),
+            (-1, -1),
+            (-1, 1),
+        ]
+        for x, y in ai_moves:
+            for dx, dy in directions:
+                count = 1  # Start with 1 to count the current piece
+                potential_blocks = []
+
+                # Check in the positive direction
+                for i in range(1, 4):
+                    nx, ny = x + dx * i, y + dy * i
+                    if (
+                        0 <= nx < BOARD_SIZE
+                        and 0 <= ny < BOARD_SIZE
+                        and (nx, ny) in ai_moves
+                    ):
                         count += 1
-                    elif self.board[x][y] == "" and (k == -1 or k == 3):
-                        extendable = True
-                    elif self.board[x][y] != player:
-                        break
-                if count == 3 and extendable:
-                    return True
-        return False
+                    else:
+                        if (
+                            0 <= nx < BOARD_SIZE
+                            and 0 <= ny < BOARD_SIZE
+                            and board[nx][ny] == ""
+                        ):
+                            potential_blocks.append((nx, ny))
+                        break  # Break if encounter empty or opponent's piece
+
+                # Check in the negative direction
+                for i in range(1, 4):
+                    nx, ny = x - dx * i, y - dy * i
+                    if (
+                        0 <= nx < BOARD_SIZE
+                        and 0 <= ny < BOARD_SIZE
+                        and (nx, ny) in ai_moves
+                    ):
+                        count += 1
+                    else:
+                        if (
+                            0 <= nx < BOARD_SIZE
+                            and 0 <= ny < BOARD_SIZE
+                            and board[nx][ny] == ""
+                        ):
+                            potential_blocks.insert(
+                                0, (nx, ny)
+                            )  # Insert at the beginning
+                        break  # Break if encounter empty or opponent's piece
+
+                # Check if there is exactly one open end with at least two empty spaces in that direction
+                if count == 3 and len(potential_blocks) == 1:
+                    extendable_end = potential_blocks[0]
+                    # Check if there's an additional empty space in the direction of the open end
+                    next_x, next_y = extendable_end[0] + dx, extendable_end[1] + dy
+                    if (
+                        0 <= next_x < BOARD_SIZE
+                        and 0 <= next_y < BOARD_SIZE
+                        and board[next_x][next_y] == ""
+                    ):
+                        return True, extendable_end
+
+        return False, None
 
     def evaluate_line(self, line, player):
         score = 0
@@ -204,17 +254,22 @@ class AI_hard:
             self.board[i][j] = ""
 
             if not ai_winning_next:
-                # Check if the player is about to win
-                self.board[i][j] = HUMAN_PLAYER
-                if self.check_win(HUMAN_PLAYER):
-                    player_winning_next = True
-                    best_move = (i, j)
-                self.board[i][j] = ""
+                if self.board[i][j] == "":
+                    # Check if the player is about to win
+                    self.board[i][j] = HUMAN_PLAYER
+                    if self.check_win(HUMAN_PLAYER):
+                        player_winning_next = True
+                        best_move = (i, j)
+                    self.board[i][j] = ""
 
             # Check if AI can extend a three in a row
-            if self.is_extendable_three(i, j, AI_PLAYER) and not player_winning_next:
-                ai_extendable_three = True
-                best_move = (i, j)
+            if not player_winning_next:
+                ai_extendable_three, het_position = self.is_extendable_three(
+                    self.board, self.ai_moves
+                )
+            if ai_extendable_three and not player_winning_next:
+
+                best_move = het_position
             self.board[i][j] = ""
 
             if player_winning_next or ai_extendable_three:
@@ -230,6 +285,7 @@ class AI_hard:
                 choice = random.randint(0, 1)
                 best_move = block_position[choice]
             else:
+                # Check if player has a 2-space-1 combination, if yes, block it!
                 has_irregular_four, block_position = self.check_unblocked_four(
                     self.board, self.player_moves, HUMAN_PLAYER
                 )

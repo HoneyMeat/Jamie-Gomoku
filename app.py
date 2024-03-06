@@ -19,7 +19,7 @@ def run_gomoku_game(difficulty, first_player):
         game.board[move[0]][move[1]] = AI_PLAYER
         game.ai_moves.append(move)
         game.update_button(move[0], move[1])
-    game.current_player = first_player
+    game.current_player = HUMAN_PLAYER
     root.mainloop()
 
 
